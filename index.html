@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Village Contributions</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #222;
+        }
+
+        header {
+            background: #14532d;
+            color: white;
+            padding: 18px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 26px;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            opacity: 0.9;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 25px auto;
+            padding: 0 15px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .section-title {
+            margin-bottom: 15px;
+            color: #14532d;
+        }
+
+        /* Village cards */
+
+        .village-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 18px;
+        }
+
+        .village-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .village-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+        }
+
+        .village-card h3 {
+            margin: 0 0 8px;
+            color: #14532d;
+        }
+
+        .village-card p {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        /* Village page */
+
+        .back-button {
+            border: none;
+            background: transparent;
+            color: #14532d;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 15px;
+            padding: 0;
+        }
+
+        .village-header {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .village-header h2 {
+            margin: 0 0 10px;
+            color: #14532d;
+        }
+
+        .village-description {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .total-box {
+            background: #ecfdf5;
+            border: 1px solid #bbf7d0;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .total-label {
+            color: #166534;
+            font-size: 14px;
+        }
+
+        .total-amount {
+            color: #14532d;
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Payment form */
+
+        .payment-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+
+        .payment-card h3 {
+            margin-top: 0;
+            color: #14532d;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #14532d;
+        }
+
+        .pay-button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 7px;
+            background: #14532d;
+            color: white;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .pay-button:hover {
+            background: #166534;
+        }
+
+        .pay-button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+
+        /* Contributions */
+
+        .contributions-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .contributions-card h3 {
+            margin-top: 0;
+            color: #14532d;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #374151;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 25px;
+            color: #777;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .success-message {
+            background: #dcfce7;
+            color: #166534;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 25px;
+            color: #777;
+            font-size: 13px;
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 22px;
+            }
+
+            .total-amount {
+                font-size: 28px;
+            }
+
+            th,
+            td {
+                padding: 10px 7px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Village Contributions</h1>
+    <p>Support your village development</p>
+</header>
+
+<div class="container">
+
+    <!-- ========================= -->
+    <!-- HOME / VILLAGE LIST -->
+    <!-- ========================= -->
+
+    <section id="homePage">
+
+        <h2 class="section-title">Select Your Village</h2>
+
+        <div id="homeError" class="error-message hidden"></div>
+
+        <div id="villageLoading" class="loading">
+            Loading villages...
+        </div>
+
+        <div id="villageGrid" class="village-grid"></div>
+
+    </section>
+
+
+    <!-- ========================= -->
+    <!-- VILLAGE PAGE -->
+    <!-- ========================= -->
+
+    <section id="villagePage" class="hidden">
+
+        <button
+            type="button"
+            class="back-button"
+            onclick="goToHome()">
+            ← Back to Villages
+        </button>
+
+        <div id="villageError" class="error-message hidden"></div>
+
+        <!-- Village header -->
+
+        <div class="village-header">
+
+            <h2 id="villageName">
+                Village Fund
+            </h2>
+
+            <div
+                id="villageDescription"
+                class="village-description">
+            </div>
+
+            <div class="total-box">
+
+                <div class="total-label">
+                    Total Contributions
+                </div>
+
+                <div
+                    id="totalAmount"
+                    class="total-amount">
+                    ₹0
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Payment form -->
+
+        <div class="payment-card">
+
+            <h3>Make a Contribution</h3>
+
+            <div
+                id="paymentMessage"
+                class="hidden">
+            </div>
+
+            <form id="paymentForm">
+
+                <div class="form-group">
+
+                    <label for="contributorName">
+                        Contributor Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="contributorName"
+                        placeholder="Enter your name"
+                        maxlength="100"
+                        required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="contributionAmount">
+                        Amount (₹)
+                    </label>
+
+                    <input
+                        type="number"
+                        id="contributionAmount"
+                        placeholder="Enter amount"
+                        min="1"
+                        step="1"
+                        required>
+
+                </div>
+
+
+                <button
+                    type="submit"
+                    id="payButton"
+                    class="pay-button">
+
+                    PAY NOW
+
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <!-- Contributions -->
+
+        <div class="contributions-card">
+
+            <h3>Contributions</h3>
+
+            <div
+                id="contributionsLoading"
+                class="loading">
+                Loading contributions...
+            </div>
+
+            <div
+                id="contributionsEmpty"
+                class="empty-message hidden">
+                No contributions available yet.
+            </div>
+
+            <div
+                id="contributionsTableWrapper"
+                class="table-wrapper hidden">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Name</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="contributionsBody">
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<footer>
+    Village Contribution System
+</footer>
+
+
+<script>
+
+    /* =========================================================
+       SUPABASE CONFIGURATION
+       ========================================================= */
+
+    const SUPABASE_URL =
+        "https://jegwmoundvbngyjgvytl.supabase.co";
+
+    const SUPABASE_PUBLISHABLE_KEY =
+        "sb_publishable_LH5kSeveJMUEp3vMj6Uppg_DGKckdbo";
+
+    const supabaseClient =
+        supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_PUBLISHABLE_KEY
+        );
+
+
+    /* =========================================================
+       GLOBAL VARIABLES
+       ========================================================= */
+
+    let currentVillage = null;
+
+
+    /* =========================================================
+       INITIALIZE APPLICATION
+       ========================================================= */
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        initializeApplication
+    );
+
+
+    async function initializeApplication() {
+
+        const params =
+            new URLSearchParams(window.location.search);
+
+        const villageSlug =
+            params.get("village");
+
+        if (villageSlug) {
+
+            await loadVillagePage(villageSlug);
+
+        } else {
+
+            await loadVillages();
+
+        }
+
+    }
+
+
+    /* =========================================================
+       HOME PAGE - LOAD ALL ACTIVE VILLAGES
+       ========================================================= */
+
+    async function loadVillages() {
+
+        showHomePage();
+
+        const loading =
+            document.getElementById("villageLoading");
+
+        const grid =
+            document.getElementById("villageGrid");
+
+        const errorElement =
+            document.getElementById("homeError");
+
+        loading.classList.remove("hidden");
+        grid.innerHTML = "";
+        errorElement.classList.add("hidden");
+
+        try {
+
+            const { data, error } =
+                await supabaseClient
+                    .from("villages")
+                    .select(
+                        "id, name, slug, description"
+                    )
+                    .eq("is_active", true)
+                    .order("name", {
+                        ascending: true
+                    });
+
+            if (error) {
+                throw error;
+            }
+
+            loading.classList.add("hidden");
+
+            if (!data || data.length === 0) {
+
+                grid.innerHTML =
+                    '<div class="empty-message">No active villages available.</div>';
+
+                return;
+            }
+
+            data.forEach(village => {
+
+                const card =
+                    document.createElement("div");
+
+                card.className =
+                    "village-card";
+
+                card.addEventListener(
+                    "click",
+                    () => openVillage(village.slug)
+                );
+
+                const title =
+                    document.createElement("h3");
+
+                title.textContent =
+                    village.name;
+
+                const description =
+                    document.createElement("p");
+
+                description.textContent =
+                    village.description ||
+                    "View village contribution fund";
+
+                card.appendChild(title);
+                card.appendChild(description);
+
+                grid.appendChild(card);
+
+            });
+
+        }
+        catch (error) {
+
+            console.error(
+                "Error loading villages:",
+                error
+            );
+
+            loading.classList.add("hidden");
+
+            errorElement.textContent =
+                "Unable to load villages. Please try again.";
+
+            errorElement.classList.remove("hidden");
+
+        }
+
+    }
+
+
+    /* =========================================================
+       NAVIGATE TO VILLAGE
+       ========================================================= */
+
+    function openVillage(slug) {
+
+        window.location.href =
+            "?village=" +
+            encodeURIComponent(slug);
+
+    }
+
+
+    /* =========================================================
+       LOAD VILLAGE PAGE
+       ========================================================= */
+
+    async function loadVillagePage(slug) {
+
+        showVillagePage();
+
+        const errorElement =
+            document.getElementById("villageError");
+
+        errorElement.classList.add("hidden");
+
+        try {
+
+            const { data, error } =
+                await supabaseClient
+                    .from("villages")
+                    .select(
+                        "id, name, slug, description"
+                    )
+                    .eq("slug", slug)
+                    .eq("is_active", true)
+                    .single();
+
+            if (error) {
+                throw error;
+            }
+
+            if (!data) {
+
+                throw new Error(
+                    "Village not found."
+                );
+
+            }
+
+            currentVillage = data;
+
+            document.getElementById(
+                "villageName"
+            ).textContent =
+                data.name + " Village Fund";
+
+            document.getElementById(
+                "villageDescription"
+            ).textContent =
+                data.description || "";
+
+            await loadVillageContributions();
+
+        }
+        catch (error) {
+
+            console.error(
+                "Error loading village:",
+                error
+            );
+
+            errorElement.textContent =
+                "Unable to load this village.";
+
+            errorElement.classList.remove(
+                "hidden"
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       LOAD CONTRIBUTIONS
+       ========================================================= */
+
+    async function loadVillageContributions() {
+
+        const loading =
+            document.getElementById(
+                "contributionsLoading"
+            );
+
+        const empty =
+            document.getElementById(
+                "contributionsEmpty"
+            );
+
+        const tableWrapper =
+            document.getElementById(
+                "contributionsTableWrapper"
+            );
+
+        const tbody =
+            document.getElementById(
+                "contributionsBody"
+            );
+
+        loading.classList.remove("hidden");
+        empty.classList.add("hidden");
+        tableWrapper.classList.add("hidden");
+
+        tbody.innerHTML = "";
+
+        try {
+
+            /*
+             * Only the public fields are selected.
+             *
+             * phonepe_transaction_id is intentionally
+             * NOT selected/displayed.
+             */
+
+            const { data, error } =
+                await supabaseClient
+                    .from("contributions")
+                    .select(
+                        "contributor_name, amount, transaction_date, payment_status"
+                    )
+                    .eq(
+                        "village_id",
+                        currentVillage.id
+                    )
+                    .order(
+                        "transaction_date",
+                        {
+                            ascending: false
+                        }
+                    );
+
+            if (error) {
+                throw error;
+            }
+
+            loading.classList.add("hidden");
+
+            const contributions =
+                data || [];
+
+            /*
+             * Calculate total only from
+             * successful payments.
+             */
+
+            let total = 0;
+
+            contributions.forEach(
+                contribution => {
+
+                    if (
+                        normalizeStatus(
+                            contribution.payment_status
+                        ) === "SUCCESS"
+                    ) {
+
+                        total +=
+                            Number(
+                                contribution.amount
+                            ) || 0;
+
+                    }
+
+                }
+            );
+
+            document.getElementById(
+                "totalAmount"
+            ).textContent =
+                formatCurrency(total);
+
+
+            if (contributions.length === 0) {
+
+                empty.classList.remove(
+                    "hidden"
+                );
+
+                return;
+            }
+
+
+            contributions.forEach(
+                contribution => {
+
+                    const row =
+                        document.createElement("tr");
+
+                    /* Name */
+
+                    const nameCell =
+                        document.createElement("td");
+
+                    nameCell.textContent =
+                        contribution.contributor_name ||
+                        "-";
+
+
+                    /* Amount */
+
+                    const amountCell =
+                        document.createElement("td");
+
+                    amountCell.textContent =
+                        formatCurrency(
+                            contribution.amount
+                        );
+
+
+                    /* Date */
+
+                    const dateCell =
+                        document.createElement("td");
+
+                    dateCell.textContent =
+                        formatDate(
+                            contribution.transaction_date
+                        );
+
+
+                    /* Status */
+
+                    const statusCell =
+                        document.createElement("td");
+
+                    const status =
+                        normalizeStatus(
+                            contribution.payment_status
+                        );
+
+                    const badge =
+                        document.createElement("span");
+
+                    badge.className =
+                        "status " +
+                        getStatusClass(status);
+
+                    badge.textContent =
+                        formatStatus(status);
+
+                    statusCell.appendChild(
+                        badge
+                    );
+
+
+                    row.appendChild(
+                        nameCell
+                    );
+
+                    row.appendChild(
+                        amountCell
+                    );
+
+                    row.appendChild(
+                        dateCell
+                    );
+
+                    row.appendChild(
+                        statusCell
+                    );
+
+                    tbody.appendChild(row);
+
+                }
+            );
+
+
+            tableWrapper.classList.remove(
+                "hidden"
+            );
+
+        }
+        catch (error) {
+
+            console.error(
+                "Error loading contributions:",
+                error
+            );
+
+            loading.classList.add("hidden");
+
+            empty.textContent =
+                "Unable to load contributions.";
+
+            empty.classList.remove(
+                "hidden"
+            );
+
+        }
+
+    }
+
+
+    /* =========================================================
+       PAYMENT FORM
+       ========================================================= */
+
+    document.getElementById(
+        "paymentForm"
+    ).addEventListener(
+        "submit",
+        submitPayment
+    );
+
+
+    async function submitPayment(event) {
+
+        event.preventDefault();
+
+        if (!currentVillage) {
+
+            showPaymentMessage(
+                "Village information is not available.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        const nameInput =
+            document.getElementById(
+                "contributorName"
+            );
+
+        const amountInput =
+            document.getElementById(
+                "contributionAmount"
+            );
+
+        const payButton =
+            document.getElementById(
+                "payButton"
+            );
+
+
+        const contributorName =
+            nameInput.value.trim();
+
+        const amount =
+            Number(
+                amountInput.value
+            );
+
+
+        /* Validation */
+
+        if (!contributorName) {
+
+            showPaymentMessage(
+                "Please enter your name.",
+                "error"
+            );
+
+            nameInput.focus();
+
+            return;
+        }
+
+
+        if (
+            !amount ||
+            amount <= 0
+        ) {
+
+            showPaymentMessage(
+                "Please enter a valid contribution amount.",
+                "error"
+            );
+
+            amountInput.focus();
+
+            return;
+        }
+
+
+        if (
+            !Number.isFinite(amount)
+        ) {
+
+            showPaymentMessage(
+                "Please enter a valid amount.",
+                "error"
+            );
+
+            return;
+        }
+
+
+        /* Disable button */
+
+        payButton.disabled = true;
+
+        payButton.textContent =
+            "Processing...";
+
+        hidePaymentMessage();
+
+
+        try {
+
+            /*
+             * IMPORTANT:
+             *
+             * The browser does NOT communicate
+             * directly with PhonePe credentials.
+             *
+             * The Supabase Edge Function handles:
+             *
+             * 1. Creating the contribution
+             * 2. Creating PhonePe order
+             * 3. Keeping PhonePe secrets secure
+             * 4. Returning the payment URL
+             */
+
+            const { data, error } =
+                await supabaseClient
+                    .functions
+                    .invoke(
+                        "create-phonepe-payment",
+                        {
+                            body: {
+
+                                village_id:
+                                    currentVillage.id,
+
+                                village_slug:
+                                    currentVillage.slug,
+
+                                contributor_name:
+                                    contributorName,
+
+                                amount:
+                                    amount
+
+                            }
+                        }
+                    );
+
+
+            if (error) {
+
+                throw error;
+
+            }
+
+
+            if (
+                !data ||
+                !data.payment_url
+            ) {
+
+                throw new Error(
+                    "Payment gateway URL was not returned."
+                );
+
+            }
+
+
+            /*
+             * Redirect user to PhonePe.
+             */
+
+            window.location.href =
+                data.payment_url;
+
+        }
+        catch (error) {
+
+            console.error(
+                "Payment error:",
+                error
+            );
+
+            showPaymentMessage(
+                error.message ||
+                "Unable to start payment. Please try again.",
+                "error"
+            );
+
+            payButton.disabled = false;
+
+            payButton.textContent =
+                "PAY NOW";
+
+        }
+
+    }
+
+
+    /* =========================================================
+       PAYMENT MESSAGE
+       ========================================================= */
+
+    function showPaymentMessage(
+        message,
+        type
+    ) {
+
+        const element =
+            document.getElementById(
+                "paymentMessage"
+            );
+
+        element.textContent =
+            message;
+
+        element.className =
+            type === "success"
+                ? "success-message"
+                : "error-message";
+
+    }
+
+
+    function hidePaymentMessage() {
+
+        const element =
+            document.getElementById(
+                "paymentMessage"
+            );
+
+        element.className =
+            "hidden";
+
+        element.textContent =
+            "";
+
+    }
+
+
+    /* =========================================================
+       STATUS HELPERS
+       ========================================================= */
+
+    function normalizeStatus(status) {
+
+        return String(
+            status || ""
+        )
+            .trim()
+            .toUpperCase();
+
+    }
+
+
+    function getStatusClass(status) {
+
+        switch (status) {
+
+            case "SUCCESS":
+            case "PAID":
+            case "COMPLETED":
+                return "status-success";
+
+            case "PENDING":
+            case "INITIATED":
+                return "status-pending";
+
+            case "FAILED":
+            case "FAILURE":
+            case "CANCELLED":
+                return "status-failed";
+
+            default:
+                return "status-pending";
+
+        }
+
+    }
+
+
+    function formatStatus(status) {
+
+        if (!status) {
+            return "Unknown";
+        }
+
+        switch (status) {
+
+            case "SUCCESS":
+                return "Success";
+
+            case "FAILED":
+            case "FAILURE":
+                return "Failed";
+
+            case "PENDING":
+            case "INITIATED":
+                return "Pending";
+
+            case "CANCELLED":
+                return "Cancelled";
+
+            default:
+                return status;
+
+        }
+
+    }
+
+
+    /* =========================================================
+       FORMATTING
+       ========================================================= */
+
+    function formatCurrency(amount) {
+
+        const value =
+            Number(amount) || 0;
+
+        return value.toLocaleString(
+            "en-IN",
+            {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 2
+            }
+        );
+
+    }
+
+
+    function formatDate(dateValue) {
+
+        if (!dateValue) {
+            return "-";
+        }
+
+        const date =
+            new Date(dateValue);
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+
+            return "-";
+
+        }
+
+        return date.toLocaleString(
+            "en-IN",
+            {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
+
+    }
+
+
+    /* =========================================================
+       PAGE NAVIGATION
+       ========================================================= */
+
+    function showHomePage() {
+
+        document
+            .getElementById("homePage")
+            .classList.remove("hidden");
+
+        document
+            .getElementById("villagePage")
+            .classList.add("hidden");
+
+    }
+
+
+    function showVillagePage() {
+
+        document
+            .getElementById("homePage")
+            .classList.add("hidden");
+
+        document
+            .getElementById("villagePage")
+            .classList.remove("hidden");
+
+    }
+
+
+    function goToHome() {
+
+        window.location.href =
+            window.location.pathname;
+
+    }
+
+</script>
+
+</body>
+</html>
